@@ -5,6 +5,10 @@ import { xml2js, xml2json } from "xml-js";
 function CurrencySelect({ data }) {
   const [selectedCode, setSelectedCode] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState(null);
+  const [checked, setChecked] = useState();
+  const [number, setNumber] = useState();
+  const [buying, setBuying] = useState();
+  const [selling, setSelling] = useState();
 
   // "Kod" değerlerini çıkaran fonksiyon
   const extractCurrencyCodes = (data) => {
@@ -19,7 +23,10 @@ function CurrencySelect({ data }) {
   const handleSelectChange = (event) => {
     const selected = event.target.value;
     setSelectedCode(selected);
-
+    setChecked("");
+    setNumber("");
+    setBuying("");
+    setSelling("");
     if (data && data.Tarih_Date && data.Tarih_Date.Currency) {
       const currency = data.Tarih_Date.Currency.find(
         (currency) => currency._attributes.Kod === selected
@@ -32,7 +39,14 @@ function CurrencySelect({ data }) {
 
   // Kod değerlerini alalım
   const currencyCodes = extractCurrencyCodes(data);
-
+  const handleCheckChange = (event) => {
+    setChecked(event.target.value);
+    setBuying(selectedCurrency.BanknoteBuying?._text * number);
+    setSelling(selectedCurrency.BanknoteSelling?._text * number);
+  };
+  const handleNumberChange = (event) => {
+    setNumber(event.target.value);
+  };
   return (
     <div>
       <select
@@ -53,14 +67,36 @@ function CurrencySelect({ data }) {
           <h3 className="">
             <span className="italic">Seçilen Para Birimi:</span> {selectedCode}
           </h3>
-          <p>
-            <span className="italic">Alış:</span>{" "}
-            {selectedCurrency.BanknoteBuying?._text || "N/A"} ₺
-          </p>
-          <p>
-            <span className="italic">Satış:</span>{" "}
-            {selectedCurrency.BanknoteSelling?._text || "N/A"} ₺
-          </p>
+          <input
+            type="number"
+            className="w-1/4 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block  p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            onChange={handleNumberChange}
+            value={number}
+          />
+          <div className="flex flex-row gap-5 my-4">
+            <input
+              type="radio"
+              value="BanknoteBuying"
+              name="gender"
+              checked={checked === "BanknoteBuying"}
+              onChange={handleCheckChange}
+            />{" "}
+            Alış
+            <input
+              type="radio"
+              value="BanknoteSelling"
+              name="gender"
+              checked={checked === "BanknoteSelling"}
+              onChange={handleCheckChange}
+            />{" "}
+            Satış
+          </div>
+
+          {checked === "BanknoteBuying" ? (
+            <p>{buying && buying + " ₺"}</p>
+          ) : (
+            <p>{selling && selling + " ₺"} </p>
+          )}
         </div>
       ) : selectedCode ? (
         <p>Bu para birimi için veri bulunamadı.</p>
@@ -77,12 +113,14 @@ function App() {
     axios
       .get(
         "https://cors-anywhere.herokuapp.com/https://www.tcmb.gov.tr/kurlar/today.xml",
+        // "https://www.tcmb.gov.tr/kurlar/today.xml",
         {
           "Content-Type": "application/xml; charset=utf-8"
         }
       )
       .then((response) => {
         const xml = response.data;
+        // console.log(xml);
 
         // XML'i JSON'a dönüştür
         const result = JSON.parse(xml2json(xml, { compact: true, spaces: 2 }));
